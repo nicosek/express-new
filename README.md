@@ -719,7 +719,7 @@ L’application `express-new` fournit plusieurs **utilitaires essentiels** pour 
 Ils permettent notamment de **gérer les erreurs, formater les données ou interagir avec des services externes**.
 
 <details>
-<summary>Détail</summary>
+<summary>📌 Voir la section complète sur les outils pratiques</summary>
 
 ---
 
@@ -891,4 +891,524 @@ CLOUDINARY_API_SECRET=your_api_secret
 🔥 **Grâce à `cloudinary.js`, la gestion des fichiers est simple et efficace !** 🚀
 </details>
 </details>
+<br>
 
+## 🚀 Créer une ressource de A à Z avec `express-new`
+
+L’objectif de cette section est de **montrer concrètement comment ajouter une nouvelle ressource** dans un projet généré avec `express-new`.
+
+<details>
+<summary>📌 Voir la section complète</summary>
+
+Nous allons implémenter un **CRUD complet** pour une ressource `Product`, en respectant **les bonnes pratiques** et en utilisant **les middlewares et utilitaires existants**.
+
+📌 **Ce que vous allez apprendre :**
+- ✅ Ajouter un **modèle Mongoose** (`Product.js`) pour stocker les données et gérer la logique métier.  
+- ✅ Définir des **routes API REST** pour manipuler cette ressource.  
+- ✅ Implémenter un **contrôleur** qui traite les requêtes et délègue la logique métier au modèle.  
+- ✅ Sécuriser les actions avec **l’authentification JWT et les policies d’autorisation**.  
+- ✅ Tester l’API avec **Postman**.
+
+> **💡 Pourquoi ce tutoriel ?**  
+> Il vous montre **la structure et le fonctionnement** d’une API Express.js bien organisée, tout en utilisant `express-new` **de manière optimale**.
+
+---
+
+### 📌 Plan du tutoriel :
+1️⃣ **Définition du modèle `Product`** (MongoDB + Mongoose)  
+2️⃣ **Création des routes REST** (`GET`, `POST`, `PUT`, `DELETE`)  
+3️⃣ **Implémentation du contrôleur (`product_controller.js`)**  
+4️⃣ **Ajout de l’authentification et de l’autorisation**  
+5️⃣ **Tests et validation avec Postman**  
+
+🔥 **À la fin, vous aurez un CRUD fonctionnel et sécurisé !** 🚀
+
+---
+
+### 🏗 **1. Définition du modèle `Product`**
+<details>
+   <summary>Détail</summary>
+
+📌 **Commençons par créer un modèle simple avec Mongoose.**
+### 🏗 1. Définition du modèle `Product`
+
+La première étape consiste à définir un **modèle Mongoose** pour notre ressource `Product`.  
+Il contiendra :
+- **Un champ `name` (nom du produit)** avec validation.  
+- **Une référence `owner`** vers un utilisateur (`User`).  
+- **Des timestamps** pour suivre la date de création/modification.
+
+---
+
+### 📌 Implémentation du modèle `Product.js`
+
+Dans **`src/models/Product.js`**, ajoutez :
+
+```javascript
+const mongoose = require("mongoose");
+
+const ProductSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, "Le nom du produit est requis"],
+      minlength: [3, "Le nom doit contenir au moins 3 caractères"],
+      trim: true, // Supprime les espaces inutiles
+    },
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // Référence au modèle User
+      required: true,
+    },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("Product", ProductSchema);
+```
+
+---
+
+### ✅ **Comprendre les validations avec Mongoose**
+
+Mongoose permet **d’ajouter des validations** directement dans le schéma.  
+📌 **Dans notre modèle `Product` :**
+- **`required: true`** → Oblige à fournir un champ (ex: `name` et `owner`).
+- **`minlength: 3`** → Empêche d’avoir un nom trop court.
+- **`trim: true`** → Supprime les espaces superflus.
+
+---
+
+### 🚨 **Gestion des erreurs de validation**
+Si une validation échoue, **Mongoose génère une `ValidationError`**, qui sera interceptée automatiquement par [`mongo_errors.js`](#-gestion-des-erreurs---errorsjs--mongo_errorsjs).
+
+📌 **Exemple d’erreur JSON pour un nom trop court :**
+```json
+{
+  "message": "Validation failed: Le nom doit contenir au moins 3 caractères"
+}
+```
+
+✅ **Avec `express-new`, les erreurs sont déjà formatées proprement** !  
+
+---
+
+🔥 **Notre modèle `Product` est prêt !**  
+📌 **Prochaine étape : Définir les routes associées.** 🚀
+</details>
+
+### 🌍 2. Définition des routes `Product`
+
+<details>
+   <summary>Détail</summary>
+
+Les routes sont chargées **d’aiguiller les requêtes** vers le bon contrôleur.  
+Nous allons créer un fichier `routes/product.js` contenant **les 5 actions CRUD classiques** :
+
+| Méthode | Endpoint | Description | Accès |
+|---------|---------|-------------|-------------|
+| `GET` | `/products` | Récupérer tous les produits | Public |
+| `GET` | `/products/:id` | Récupérer un produit spécifique | Public |
+| `POST` | `/products` | Ajouter un nouveau produit | 🔒 Authentifié |
+| `PUT` | `/products/:id` | Modifier un produit | 🔒 Propriétaire uniquement |
+| `DELETE` | `/products/:id` | Supprimer un produit | 🔒 Propriétaire uniquement |
+
+---
+
+### 🛠 **Implémentation des routes dans `routes/product.js`**
+
+Dans **`src/routes/product.js`**, ajoutez :
+
+```javascript
+const express = require("express");
+const router = express.Router();
+const productController = require("../controllers/product_controller");
+const authMiddleware = require("../middlewares/auth_middleware");
+const authorize = require("../middlewares/authorize");
+const Product = require("../models/Product");
+
+// 🛍 Récupérer tous les produits (public)
+router.get("/", productController.getAll);
+
+// 🔍 Récupérer un produit spécifique (public)
+router.get("/:id", productController.getOne);
+
+// ➕ Ajouter un produit (nécessite une authentification)
+router.post("/", authMiddleware, productController.create);
+
+// 🛠 Modifier un produit (seul le propriétaire peut modifier)
+router.put("/:id", authMiddleware, authorize(Product, "update"), productController.update);
+
+// ❌ Supprimer un produit (seul le propriétaire peut supprimer)
+router.delete("/:id", authMiddleware, authorize(Product, "delete"), productController.delete);
+
+module.exports = router;
+```
+
+---
+
+### 🔒 **Sécurisation des routes**
+✅ **Les routes `POST`, `PUT` et `DELETE` nécessitent une authentification.**  
+✅ **Les routes `PUT` et `DELETE` sont protégées par l’autorisation (`authorize.js`).**  
+✅ **Les routes `GET` restent publiques.**
+
+🔥 **Les routes sont prêtes !**  
+📌 **Prochaine étape : Implémenter le contrôleur `product_controller.js`.** 🚀
+</details>
+
+
+### 🎛 3. Implémentation du contrôleur `product_controller.js`
+
+<details>
+<summary>Détail</summary>
+
+Le **contrôleur** gère les requêtes liées aux produits et **délègue la logique métier au modèle `Product`**.
+
+📌 **Dans `express-new`, chaque action est gérée via un contrôleur dédié.**
+
+---
+
+### 🛠 **Implémentation du contrôleur dans `controllers/product_controller.js`**
+
+Dans **`src/controllers/product_controller.js`**, ajoutez :
+
+```javascript
+const Product = require("../models/Product");
+const asyncHandler = require("../middlewares/async-handler");
+const { NotFoundError } = require("../utils/errors");
+
+// 📌 Récupérer tous les produits
+exports.getAll = asyncHandler(async (req, res) => {
+  const products = await Product.find();
+  res.json(products);
+});
+
+// 🔍 Récupérer un produit spécifique
+exports.getOne = asyncHandler(async (req, res, next) => {
+  const product = await Product.findById(req.params.id);
+  if (!product) return next(new NotFoundError(null, { modelName: "Product" }));
+  res.json(product);
+});
+
+// ➕ Ajouter un nouveau produit
+exports.create = asyncHandler(async (req, res) => {
+  const product = await Product.create({ ...req.body, owner: req.user._id });
+  res.status(201).json(product);
+});
+
+// 🛠 Modifier un produit (vérification de l’autorisation déjà faite via `authorize`)
+exports.update = asyncHandler(async (req, res, next) => {
+  const product = await Product.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+    runValidators: true,
+  });
+
+  if (!product) return next(new NotFoundError(null, { modelName: "Product" }));
+  res.json(product);
+});
+
+// ❌ Supprimer un produit
+exports.delete = asyncHandler(async (req, res, next) => {
+  const product = await Product.findByIdAndDelete(req.params.id);
+  if (!product) return next(new NotFoundError(null, { modelName: "Product" }));
+  res.json({ message: "Produit supprimé avec succès" });
+});
+```
+
+---
+
+### 🔄 **Explication des actions**
+| 🛠 Action | 📌 Description |
+|------------|------------------------------------------------|
+| **`getAll`** | Retourne la liste de tous les produits |
+| **`getOne`** | Retourne un seul produit via son `id` (ou 404 si non trouvé) |
+| **`create`** | Crée un produit **en liant l’utilisateur connecté (`req.user._id`)** |
+| **`update`** | Modifie un produit existant (via `findByIdAndUpdate`) |
+| **`delete`** | Supprime un produit (via `findByIdAndDelete`) |
+
+---
+
+### 🚀 **Bonnes pratiques appliquées**
+✅ **Utilisation de `asyncHandler.js`** → Plus besoin d’écrire `try/catch` à la main.  
+✅ **Gestion automatique des erreurs (`NotFoundError`)** → Plus de `if (!product) return res.status(404)...`.  
+✅ **Respect de l’architecture MVC** → Le modèle gère la logique métier, le contrôleur ne fait que **traiter les requêtes**.
+
+---
+
+🔥 **Notre contrôleur est prêt !**  
+📌 **Prochaine étape : Sécuriser les actions avec les Policies.** 🚀
+</details>
+
+### 🔐 4. Ajout de l’authentification et de l’autorisation
+
+<details>
+<summary>Détail</summary>
+
+Nous avons défini les **routes** et le **contrôleur** pour `Product`, mais certaines actions nécessitent une **protection** :
+
+| 🛠 Action | 🔒 Protection appliquée |
+|------------|------------------------------------------------|
+| **`POST /products`** | 🔑 **Authentification requise** (`authMiddleware`) |
+| **`PUT /products/:id`** | 🔑 **Authentification + Vérification du propriétaire** (`authorize.js`) |
+| **`DELETE /products/:id`** | 🔑 **Authentification + Vérification du propriétaire** (`authorize.js`) |
+
+---
+
+## 🔑 **Authentification : Déjà en place grâce aux middlewares !**
+
+Lors de l'**étape 2**, nous avons défini nos routes en appliquant le middleware **`authMiddleware`**.  
+Cela signifie que **toutes les routes sensibles sont déjà protégées** contre les utilisateurs non connectés. ✅
+
+📌 **Petit rappel : Dans `routes/product.js`, nous avons déjà ceci :**
+```javascript
+router.post("/", authMiddleware, productController.create);
+router.put("/:id", authMiddleware, productController.update);
+router.delete("/:id", authMiddleware, productController.delete);
+```
+
+👉 **Nous n'avons rien à modifier ici !** 🎉  
+✅ **Seuls les utilisateurs authentifiés peuvent accéder à ces routes**.
+
+---
+
+## 🛡 **Ajout des permissions avec `authorize.js` et les policies**
+
+L’authentification seule ne suffit pas.  
+Même si un utilisateur est connecté, **il ne doit pas pouvoir modifier ou supprimer** un produit **qui ne lui appartient pas**.
+
+📌 **Nous allons donc ajouter `authorize.js` pour vérifier les permissions.**
+
+Dans **`routes/product.js`**, **ajoutez `authorize(Product, "update")` et `authorize(Product, "delete")` :**
+
+```javascript
+router.put("/:id", authMiddleware, authorize(Product, "update"), productController.update);
+router.delete("/:id", authMiddleware, authorize(Product, "delete"), productController.delete);
+```
+
+✅ **Désormais, avant d’exécuter `update` ou `delete`, `authorize.js` va vérifier les permissions de l’utilisateur.**
+
+---
+
+## 📜 **Création de la policy `product_policy.js`**
+
+Nous allons maintenant créer une **policy** spécifique pour `Product`, qui **étend `BasePolicy`**.
+
+Dans **`src/policies/product_policy.js`**, ajoutez :
+
+```javascript
+const BasePolicy = require("./base_policy");
+
+class ProductPolicy extends BasePolicy {
+  update() {
+    return this.isOwner();
+  }
+
+  delete() {
+    return this.isOwner();
+  }
+}
+
+module.exports = ProductPolicy;
+```
+
+✅ **Cette policy empêche toute modification/suppression par un autre utilisateur**.  
+✅ **L’autorisation est appliquée proprement via `authorize.js`**.
+
+---
+
+## 🔥 **Résumé**
+| 🔒 Sécurité | 📌 Protection appliquée |
+|------------|------------------------------------------------|
+| **🔑 Authentification** (`authMiddleware`) | Vérifie que l’utilisateur est bien connecté (✅ Déjà en place) |
+| **🛡 Autorisation** (`authorize.js`) | Vérifie si l’utilisateur a le droit d’effectuer l’action |
+| **📜 Policy `Product`** | Restreint `update` et `delete` au propriétaire |
+
+🔥 **Grâce à `express-new`, notre API est sécurisée dès le départ !** 🚀  
+📌 **Prochaine étape : Tester et valider nos endpoints avec Postman.** ✅
+
+</details>
+
+### 🛠 5. Tester et valider les endpoints avec Postman
+
+<details>
+<summary>Détails</summary>
+
+Notre API est maintenant **complète et sécurisée**, il ne reste plus qu’à tester chaque action !
+
+Nous allons valider :
+1️⃣ **La création d’un produit (`POST /products`)**  
+2️⃣ **La récupération de la liste des produits (`GET /products`)**  
+3️⃣ **La récupération d’un produit spécifique (`GET /products/:id`)**  
+4️⃣ **La modification d’un produit (`PUT /products/:id`)**  
+5️⃣ **La suppression d’un produit (`DELETE /products/:id`)**  
+
+---
+
+## 🔐 **Authentification : Obtenir un token JWT**
+
+Avant de tester les routes protégées, nous devons récupérer un **token JWT**.  
+📌 **Utilisez l’endpoint de login pour générer un token :**
+
+```http
+POST http://localhost:3000/auth/login
+```
+
+Content-Type: application/json
+```json
+{
+  "email": "test@example.com",
+  "password": "monpassword"
+}
+```
+
+✅ **Réponse attendue :**
+```json
+{
+  "_id": "65a7f5e2d4c3e6b8b9fbc123",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5..."
+}
+```
+
+> **Gardez ce token !** 🎯 Nous allons l'utiliser pour tester les routes protégées.
+
+---
+
+## ➕ 1. **Créer un produit (`POST /products`)**
+
+📌 **Requête pour ajouter un produit :**
+```http
+POST http://localhost:3000/products
+```
+Headers :
+```http
+Authorization: Bearer VOTRE_TOKEN_ICI
+Content-Type: application/json
+```
+Body :
+```json
+{
+  "name": "MacBook Pro",
+  "price": 2499
+}
+```
+
+✅ **Réponse attendue :**
+```json
+{
+  "_id": "65a7f6e5d4c3e6b8b9fbc456",
+  "name": "MacBook Pro",
+  "price": 2499,
+  "owner": "65a7f5e2d4c3e6b8b9fbc123"
+}
+```
+
+---
+
+## 📌 2. **Récupérer la liste des produits (`GET /products`)**
+
+📌 **Requête pour récupérer tous les produits :**
+```http
+GET http://localhost:3000/products
+```
+
+✅ **Réponse attendue :**
+```json
+[
+  {
+    "_id": "65a7f6e5d4c3e6b8b9fbc456",
+    "name": "MacBook Pro",
+    "price": 2499,
+    "owner": "65a7f5e2d4c3e6b8b9fbc123"
+  }
+]
+```
+
+---
+
+## 🔍 3. **Récupérer un produit spécifique (`GET /products/:id`)**
+
+📌 **Requête pour récupérer un produit :**
+```http
+GET http://localhost:3000/products/65a7f6e5d4c3e6b8b9fbc456
+```
+
+✅ **Réponse attendue :**
+```json
+{
+  "_id": "65a7f6e5d4c3e6b8b9fbc456",
+  "name": "MacBook Pro",
+  "price": 2499,
+  "owner": "65a7f5e2d4c3e6b8b9fbc123"
+}
+```
+
+---
+
+## 🛠 4. **Modifier un produit (`PUT /products/:id`)**
+
+📌 **Requête pour modifier un produit :**
+```http
+PUT http://localhost:3000/products/65a7f6e5d4c3e6b8b9fbc456
+```
+Headers :
+```http
+Authorization: Bearer VOTRE_TOKEN_ICI
+Content-Type: application/json
+```
+Body :
+```json
+{
+  "price": 2299
+}
+```
+
+✅ **Réponse attendue :**
+```json
+{
+  "_id": "65a7f6e5d4c3e6b8b9fbc456",
+  "name": "MacBook Pro",
+  "price": 2299,
+  "owner": "65a7f5e2d4c3e6b8b9fbc123"
+}
+```
+
+> ⚠️ **Vérifiez que la modification est refusée si l’utilisateur n’est pas le propriétaire !**
+
+---
+
+## ❌ 5. **Supprimer un produit (`DELETE /products/:id`)**
+
+📌 **Requête pour supprimer un produit :**
+```http
+DELETE http://localhost:3000/products/65a7f6e5d4c3e6b8b9fbc456
+```
+Headers :
+```http
+Authorization: Bearer VOTRE_TOKEN_ICI
+```
+
+✅ **Réponse attendue :**
+```json
+{
+  "message": "Produit supprimé avec succès"
+}
+```
+
+> ⚠️ **Vérifiez que la suppression est refusée si l’utilisateur n’est pas le propriétaire !**
+
+---
+
+## 🚀 **Notre API est totalement opérationnelle ! 🎯**
+
+✅ **Toutes les fonctionnalités ont été testées et validées avec Postman.**  
+✅ **L’authentification et l’autorisation fonctionnent correctement.**  
+✅ **Les erreurs sont bien gérées (`401 Unauthorized`, `403 Forbidden`, `404 Not Found`).**  
+
+---
+
+🔥 **Bravo ! Vous venez de finaliser une API Express.js sécurisée avec `express-new` !** 🚀  
+💡 **Prochaine étape ? Ajouter de nouvelles fonctionnalités, comme l’upload d’images avec Cloudinary !** 🎯
+
+
+</details>
+</details>
