@@ -41,6 +41,78 @@ GET http://localhost:3000/
 
 <br><br/>
 
+## 📂 Structure du projet
+
+Le projet suit une **architecture modulaire et organisée**, inspirée des meilleures pratiques en développement backend avec **Express.js**.
+
+Voici la structure générée par `express-new` :
+
+```
+/mon-projet
+│── config/            # Configuration de l'application (ex: connexion à la DB, API externes)
+│   ├── cloudinary.js  # Configuration de Cloudinary pour le stockage des fichiers
+│   ├── database.js    # Connexion à la base de données MongoDB
+│
+│── src/               # Contient toute la logique métier de l’application
+│   │── controllers/   # Gestion des requêtes HTTP et logique applicative
+│   │   ├── auth_controller.js  # Contrôleur pour l'authentification
+│   │
+│   │── middlewares/   # Middlewares Express.js pour le traitement des requêtes
+│   │   ├── async-handler.js    # Middleware pour gérer proprement les erreurs async
+│   │   ├── auth_middleware.js  # Middleware d'authentification (JWT)
+│   │   ├── authorize.js        # Middleware d’autorisation basé sur les policies
+│   │   ├── error-handler.js    # Gestion centralisée des erreurs
+│   │
+│   │── models/        # Définition des schémas Mongoose pour MongoDB
+│   │   ├── User.js    # Modèle utilisateur
+│   │
+│   │── policies/      # Système d’autorisation (façon Pundit en Ruby)
+│   │   ├── base_policy.js  # Base des policies utilisées pour l’accès aux ressources
+│   │
+│   │── routes/        # Définition des routes de l’API
+│   │   ├── auth.js    # Routes liées à l'authentification
+│   │
+│   │── scripts/       # Scripts utilitaires exécutables manuellement
+│   │   ├── console.js # Interface REPL pour interagir avec la base de données
+│   │   ├── seed.js    # Script pour insérer des données initiales (seeding)
+│   │
+│   │── services/      # Services dédiés aux actions métiers transversales
+│
+│── utils/             # Fonctions utilitaires globales
+│   ├── cloudinary.js  # Gestion des uploads sur Cloudinary
+│   ├── errors.js      # Définition des classes d'erreurs personnalisées
+│   ├── format.js      # Fonctions de formatage diverses
+│   ├── mongo_errors.js # Gestion des erreurs MongoDB
+│
+│── index.js           # Point d’entrée principal du serveur Express.js
+│── .env               # Variables d’environnement (⚠ à ne pas commit)
+│── .gitignore         # Fichiers à ignorer par Git (ex: node_modules, .env)
+│── package.json       # Dépendances et scripts npm
+│── package-lock.json  # Verrouillage des versions des dépendances
+```
+
+---
+
+<!---
+### **📌 Explication de l’architecture**
+L’application suit **une organisation claire** où chaque dossier a un rôle bien défini :
+
+1️⃣ **`config/`** → Centralise les fichiers de configuration (DB, Cloudinary, etc.).  
+2️⃣ **`src/`** → Contient **tout le code métier** de l’application.  
+   - **`controllers/`** → Gèrent la logique des requêtes HTTP.  
+   - **`middlewares/`** → Middlewares Express pour authentification, erreurs, etc.  
+   - **`models/`** → Définition des schémas MongoDB.  
+   - **`policies/`** → Gestion fine des permissions utilisateur.  
+   - **`routes/`** → Définit les routes de l’API.  
+   - **`scripts/`** → Scripts utiles à exécuter manuellement.  
+   - **`services/`** → Pour encapsuler la logique métier partagée.
+   - **`utils/`** → Regroupe des fonctions utilitaires globales.
+
+3️⃣ **Fichiers racine (`index.js`, `.env`, `.gitignore`...)** → Gestion du serveur et configuration.  
+---
+-->
+<br></br>
+
 ## 🚀 Mode d'emploi
 
 ### 📥 Récupérer le script `express-new`
@@ -142,6 +214,3 @@ Content-Type: application/json
 
 🔥 **Votre serveur est opérationnel ! Vous pouvez maintenant explorer et étendre l’API.** 🚀
 <br><br/>
-
-
-
