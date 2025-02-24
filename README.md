@@ -710,6 +710,185 @@ Le middleware capture **toutes les erreurs** et renvoie une réponse formatée.
 🔥 **Avec `error-handler.js`, la gestion des erreurs devient simple et efficace !** 🚀
 </details>
 </details>
+<br>
 
 
+## 🛠 Utilitaires - Outils pratiques intégrés
+
+L’application `express-new` fournit plusieurs **utilitaires essentiels** pour simplifier le développement.  
+Ils permettent notamment de **gérer les erreurs, formater les données ou interagir avec des services externes**.
+
+<details>
+<summary>Détail</summary>
+
+---
+
+### 🚨 Gestion des erreurs - `errors.js` & `mongo_errors.js`
+
+Une **API bien conçue** doit **gérer proprement les erreurs** pour garantir une expérience utilisateur fluide et éviter d’exposer des informations sensibles.
+
+<details>
+<summary>Détail</summary>
+
+L’application inclut un système **centralisé** qui :
+- ✅ Fournit **des classes d’erreurs personnalisées** (`NotFoundError`, `BadRequestError`, etc.).
+- ✅ Gère **automatiquement les erreurs MongoDB** (ex: contraintes d’unicité, erreurs de validation).
+- ✅ Fonctionne de pair avec [`error-handler.js`](#-error-handlerjs---gestion-centralisee-des-erreurs) pour capturer toutes les erreurs et les transformer en réponses cohérentes.
+
+---
+
+### 📌 `errors.js` - Une hiérarchie d’erreurs cohérente
+
+Au lieu de retourner de simples messages `"Erreur 404"`, chaque type d’erreur a une **classe dédiée** qui :  
+✔ **Associe un code HTTP clair (`404`, `400`, `401`, etc.)**  
+✔ **Offre des messages explicites et dynamiques**  
+
+Exemple :  
+Si un utilisateur demande une ressource inexistante (`GET /users/99999`) :
+
+```json
+{
+  "message": "User not found"
+}
+```
+🔹 **Avec `errors.js`, le code est plus lisible et les erreurs sont uniformisées.**
+
+---
+
+### 🔄 `mongo_errors.js` - Mapping automatique des erreurs MongoDB
+
+MongoDB génère des erreurs spécifiques (`ValidationError`, `CastError`, `11000` pour les duplications).  
+Le fichier `mongo_errors.js` les **transforme automatiquement** en erreurs API claires.
+
+Exemple :  
+Si un utilisateur tente de s’inscrire avec un email déjà utilisé :
+
+```json
+{
+  "message": "User with this email already exists"
+}
+```
+✅ **Sans intervention du développeur, l’erreur MongoDB devient une réponse API structurée et compréhensible.**
+
+---
+
+### 📌 Résumé des utilitaires d'erreurs
+
+| 🛠 Fichier | 📌 Rôle |
+|-----------|--------------------------------------------------|
+| `errors.js` | Définit des classes d’erreurs personnalisées pour l’API |
+| `mongo_errors.js` | Associe les erreurs MongoDB aux erreurs HTTP correspondantes |
+| `error-handler.js` | Capture et gère toutes les erreurs de manière uniforme (cf. section middlewares) |
+
+✅ **Gestion d'erreurs claire et centralisée**  
+✅ **Réduction du code répétitif**  
+✅ **Protection contre les messages d’erreurs sensibles en production**  
+
+---
+
+🔥 **Avec ces outils, la gestion des erreurs est fluide et optimisée !** 🚀
+</details><br>
+
+### ☁️ Gestion des fichiers - `cloudinary.js`
+
+L’application `express-new` inclut un **utilitaire prêt à l’emploi** pour gérer l’upload et la suppression d’images via **Cloudinary**.
+
+<details>
+<summary>Détail</summary>
+
+---
+
+### 📌 Pourquoi utiliser Cloudinary ?
+Cloudinary est un service d’hébergement d’images qui permet de :
+- 📤 **Uploader des fichiers** et obtenir une URL immédiatement exploitable.
+- 🎨 **Optimiser et transformer** les images à la volée.
+- ⚡ **Éviter le stockage d’images sur le serveur** (gain de performance et d’espace).
+
+📌 **Dans `express-new`, Cloudinary est directement configuré et utilisable sans setup supplémentaire.**
+
+---
+
+### 🛠 `cloudinary.js` - L’utilitaire d’upload et suppression d’images
+
+Le fichier `cloudinary.js` fournit **deux fonctions essentielles** pour interagir avec Cloudinary :
+
+| Fonction | 📌 Rôle |
+|------------------|--------------------------------------------------|
+| `uploadImage(file, folder)` | Upload un fichier vers Cloudinary et retourne son URL |
+| `deleteImage(publicId)` | Supprime un fichier stocké sur Cloudinary |
+
+---
+
+### 📤 `uploadImage(file, folder)` - Envoi d’une image
+
+Cette fonction :
+✔ **Prend en entrée un fichier temporaire** (ex: uploadé via un formulaire).  
+✔ **Envoie le fichier à Cloudinary**, dans un dossier défini.  
+✔ **Retourne l’URL de l’image hébergée**.  
+
+**Exemple d’utilisation dans un contrôleur** :
+```javascript
+const { uploadImage } = require("../utils/cloudinary");
+
+router.post("/upload", async (req, res) => {
+  try {
+    const imageData = await uploadImage(req.files.image, "avatars");
+    res.json({ url: imageData.url });
+  } catch (error) {
+    res.status(500).json({ message: "Upload failed", error: error.message });
+  }
+});
+```
+
+📌 **L’image est automatiquement stockée et accessible via Cloudinary.**
+
+---
+
+### ❌ `deleteImage(publicId)` - Suppression d’une image
+
+Cette fonction permet de **supprimer un fichier stocké sur Cloudinary** via son `publicId`.
+
+**Exemple d’utilisation** :
+```javascript
+const { deleteImage } = require("../utils/cloudinary");
+
+router.delete("/image/:id", async (req, res) => {
+  await deleteImage(req.params.id);
+  res.json({ message: "Image deleted successfully" });
+});
+```
+
+✅ **Les fichiers inutilisés ne restent pas stockés indéfiniment sur Cloudinary.**  
+✅ **Simplifie la gestion des images en mode dynamique.**
+
+---
+
+### 🚀 Configuration automatique
+
+Dans `express-new`, **les variables Cloudinary sont déjà préconfigurées** dans `.env` :
+
+```env
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
+
+📌 **Une fois ces valeurs renseignées, l’upload fonctionne immédiatement !**
+
+---
+
+### 🔎 Résumé des fonctionnalités Cloudinary
+
+| ☁️ Fonctionnalité | 📌 Avantage |
+|------------------|--------------------------------------|
+| **Upload d’images** | Stockage sur Cloudinary, URL accessible immédiatement |
+| **Suppression d’images** | Nettoyage simple des fichiers inutilisés |
+| **Préconfiguration** | Fonctionne dès le lancement du projet |
+| **Optimisation CDN** | Chargement rapide et transformations d’image automatiques |
+
+---
+
+🔥 **Grâce à `cloudinary.js`, la gestion des fichiers est simple et efficace !** 🚀
+</details>
+</details>
 
