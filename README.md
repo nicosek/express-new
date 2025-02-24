@@ -18,6 +18,29 @@ Il inclut :
 
 <br><br/>
 
+## 🚀 Quickstart
+
+
+```sh
+# Clonez le projet express-new sur votre machine
+git clone --depth=1 https://github.com/VOTRE-UTILISATEUR/express-new.git && cd express-new
+
+# Lancez le script avec Node.js pour générer un projet Express.js
+node express-new.js mon-projet && cd mon-projet
+
+# Démarrez le serveur Express.js
+node index.js
+```
+
+### 🔗 Tester immédiatement avec une requête HTTP :
+```http
+GET http://localhost:3000/
+```
+
+🔥 **Votre serveur est prêt !** Vous pouvez maintenant développer votre API. 🚀
+
+<br><br/>
+
 ## 🚀 Mode d'emploi
 
 ### 📥 Récupérer le script `express-new`
@@ -34,14 +57,33 @@ curl -o express-new.js https://raw.githubusercontent.com/VOTRE-UTILISATEUR/expre
 ```
 ---
 
-### 🛠 Générer un projet Express.js avec `express-new`
+
+### 🛠 Générer un projet Express.js
+
+Vous pouvez générer un projet Express.js en exécutant directement le script avec **Node.js** :
+
+```sh
+node express-new.js mon-projet
+```
+
+Cela va créer un projet backend **Express.js** préconfiguré dans le dossier `mon-projet`.
+
+---
+
+#### 🔧 Rendre la commande `express-new` disponible globalement  
+Si vous souhaitez pouvoir exécuter `express-new mon-projet` **depuis n'importe où dans votre terminal**, vous pouvez ajouter le script dans un répertoire accessible via votre `$PATH` :
+
+```sh
+chmod +x express-new.js
+mv express-new.js /usr/local/bin/express-new
+```
+
+Après cela, vous pourrez utiliser la commande raccourcie :
+
 ```sh
 express-new mon-projet
 ```
 
-Cela va générer un projet backend **Express.js** préconfiguré dans le dossier `mon-projet`.
-
----
 
 ### 🚀 Démarrer le serveur
 
