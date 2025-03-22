@@ -181,7 +181,7 @@ UserSchema.methods.comparePassword = function (password) {
 };
 
 UserSchema.methods.generateToken = function () {
-  return jwt.sign({ userId: this._id }, process.env.JWT_SECRET, {
+  return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
     expiresIn: TOKEN_EXPIRATION,
   });
 };
@@ -201,7 +201,7 @@ router.post("/login", asyncHandler(AuthController.login));
 
 module.exports = router;
 `,
-  "src/controllers/auth_controller.js": `const User = require("../models/user");
+  "src/controllers/auth_controller.js": `const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const uid2 = require("uid2");
 const {
@@ -316,14 +316,15 @@ const authorize = (Model, action) => {
 module.exports = authorize;
 `,
   "src/middlewares/auth_middleware.js": `const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) return res.status(401).json({ error: "Accès refusé" });
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    req.user = await User.findById(decoded.id);
     next();
   } catch (error) {
     res.status(401).json({ error: "Token invalide" });
